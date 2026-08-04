@@ -6,17 +6,21 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
-    - uses: actions/checkout@v4
+    - name: Descargar código
+      uses: actions/checkout@v4
 
-    - name: Configurar .NET
+    - name: Configurar .NET 8
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '8.0.x'
 
-    - name: Compilar ejecutable autodetenido (.exe único)
-      run: dotnet publish -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true /p:EnableCompressionInSingleFile=true -o ./dist
+    - name: Restaurar dependencias
+      run: dotnet restore
 
-    - name: Subir EXE
+    - name: Compilar ejecutable Single-File
+      run: dotnet publish GeneradorXML.csproj -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true /p:EnableCompressionInSingleFile=true -o ./dist
+
+    - name: Subir ejecutable
       uses: actions/upload-artifact@v4
       with:
         name: GeneradorXML_EXE
