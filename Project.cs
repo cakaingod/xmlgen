@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Xml.Linq;
 
 class Program
@@ -21,11 +22,10 @@ class Program
         Console.WriteLine("=============================================");
         Console.WriteLine("        GENERADOR DE ARCHIVOS XML            ");
         Console.WriteLine("=============================================\n");
-        
+
         Console.Write("Ingresa la ruta de la carpeta donde deseas guardar los XML (o presiona Enter para usar la carpeta actual): ");
         string? targetDirectory = Console.ReadLine()?.Trim();
 
-        // Si el usuario no escribe nada, usa la carpeta donde corre el programa
         if (string.IsNullOrWhiteSpace(targetDirectory))
         {
             targetDirectory = AppDomain.CurrentDomain.BaseDirectory;
@@ -48,21 +48,30 @@ class Program
             return;
         }
 
-        // 3. Procesar el archivo CSV
-        string[] lineas = File.ReadAllLines(csvFile);
-        int contador = 0;
+        // 3. Leer y filtrar las líneas del CSV para conocer el total real de registros
+        string[] todasLasLineas = File.ReadAllLines(csvFile);
+        var registros = todasLasLineas
+            .Select(l => l.Trim())
+            .Where(l => !string.IsNullOrWhiteSpace(l) && !l.Equals("ACCESSION_NUMBER", StringComparison.OrdinalIgnoreCase))
+            .ToList();
 
-        Console.WriteLine("\nProcesando números de acceso...\n");
+        int totalRegistros = registros.Count;
 
-        foreach (string linea in lineas)
+        if (totalRegistros == 0)
         {
-            string accessionNumber = linea.Trim();
+            Console.WriteLine("\nEl archivo CSV está vacío o no contiene registros válidos.");
+            Console.WriteLine("Presiona cualquier tecla para salir...");
+            Console.ReadKey();
+            return;
+        }
 
-            // Omitir líneas vacías o la cabecera "ACCESSION_NUMBER"
-            if (string.IsNullOrWhiteSpace(accessionNumber) || 
-                accessionNumber.Equals("ACCESSION_NUMBER", StringComparison.OrdinalIgnoreCase))
-                continue;
+        Console.WriteLine($"\nSe encontraron {totalRegistros} registros para procesar.\n");
 
+        int procesados = 0;
+
+        // 4. Procesar con porcentaje y barra de progreso
+        foreach (string accessionNumber in registros)
+        {
             // Construir el XML
             XElement xml = new XElement("MWL_ITEM",
                 new XElement("ACCESSION_NUMBER", accessionNumber),
@@ -75,17 +84,26 @@ class Program
                 new XElement("IP", "127.0.0.1")
             );
 
-            // Generar ruta completa de salida
+            // Generar archivo XML
             string fileName = $"{accessionNumber}.xml";
             string fullPath = Path.Combine(targetDirectory, fileName);
-
             xml.Save(fullPath);
-            Console.WriteLine($"[OK] Generado: {fileName}");
-            contador++;
+
+            procesados++;
+
+            // Cálculo de porcentaje
+            double porcentaje = (double)procesados / totalRegistros * 100;
+
+            // Dibujar barra de progreso (longitud de 20 caracteres)
+            int bloquesLlenos = (int)(porcentaje / 5); // 100% / 20 = 5% por bloque
+            string barra = new string('█', bloquesLlenos) + new string('░', 20 - bloquesLlenos);
+
+            // Imprimir línea formateada
+            Console.WriteLine($"[{procesados}/{totalRegistros}] [{barra}] {porcentaje:0.0}% | Generado: {fileName}");
         }
 
-        Console.WriteLine($"\n=============================================");
-        Console.WriteLine($"¡Proceso completado! Total XMLs creados: {contador}");
+        Console.WriteLine("\n=============================================");
+        Console.WriteLine($"¡Proceso completado al 100%! Total XMLs creados: {procesados}");
         Console.WriteLine($"Ubicación: {targetDirectory}");
         Console.WriteLine("=============================================");
         Console.WriteLine("\nPresiona cualquier tecla para salir...");
