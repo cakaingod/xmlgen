@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Xml;
 using System.Xml.Linq;
 
 class Program
@@ -77,7 +78,14 @@ class Program
         logContent.AppendLine($"LOG DE PROCESAMIENTO XML - {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
         logContent.AppendLine("==================================================================");
 
-        // 5. Leer registros del CSV
+        // 5. Configurar el guardado de XML para omitir la declaración <?xml ...?>
+        XmlWriterSettings xmlSettings = new XmlWriterSettings
+        {
+            OmitXmlDeclaration = true,
+            Indent = true // Mantiene el formato con sangría/saltos de línea
+        };
+
+        // 6. Leer registros del CSV
         string[] todasLasLineas = File.ReadAllLines(csvFile);
         var registros = todasLasLineas
             .Select(l => l.Trim())
@@ -102,7 +110,7 @@ class Program
         int fallidos = 0;
         int procesados = 0;
 
-        // 6. Procesar cada registro
+        // 7. Procesar cada registro
         foreach (string accessionNumber in registros)
         {
             procesados++;
@@ -128,7 +136,11 @@ class Program
                 string fileName = $"{accessionNumber}.xml";
                 string fullPath = Path.Combine(targetDirectory, fileName);
                 
-                xml.Save(fullPath);
+                // Guardar sin cabecera <?xml ...?>
+                using (XmlWriter writer = XmlWriter.Create(fullPath, xmlSettings))
+                {
+                    xml.Save(writer);
+                }
 
                 exitosos++;
                 
@@ -150,7 +162,7 @@ class Program
             }
         }
 
-        // 7. Resumen final en LOG y consola
+        // 8. Resumen final en LOG y consola
         logContent.AppendLine("\n==================================================================");
         logContent.AppendLine("RESUMEN DE RESULTADOS:");
         logContent.AppendLine($"Total procesados: {totalRegistros}");
