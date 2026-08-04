@@ -19,7 +19,7 @@ class Program
             return;
         }
 
-        // 2. Consultar al usuario la ruta de destino
+        // 2. Consultar al usuario la ruta de destino para los XML
         Console.WriteLine("=============================================");
         Console.WriteLine("        GENERADOR DE ARCHIVOS XML            ");
         Console.WriteLine("=============================================\n");
@@ -32,32 +32,52 @@ class Program
             targetDirectory = AppDomain.CurrentDomain.BaseDirectory;
         }
 
-        // Crear la carpeta de destino si no existe
+        // Crear la carpeta de destino para XMLs si no existe
         try
         {
             if (!Directory.Exists(targetDirectory))
             {
                 Directory.CreateDirectory(targetDirectory);
-                Console.WriteLine($"\n[INFO] La carpeta de destino fue creada: {targetDirectory}");
+                Console.WriteLine($"\n[INFO] La carpeta de destino XML fue creada: {targetDirectory}");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"\nError al acceder/crear la carpeta: {ex.Message}");
+            Console.WriteLine($"\nError al acceder/crear la carpeta de XMLs: {ex.Message}");
             Console.WriteLine("Presiona cualquier tecla para salir...");
             Console.ReadKey();
             return;
         }
 
-        // 3. Preparar el archivo LOG
-        string logFilePath = Path.Combine(targetDirectory, "log_ejecucion.txt");
+        // 3. Crear carpeta "log" dentro de la carpeta del .exe si no existe
+        string exeDirectory = AppDomain.CurrentDomain.BaseDirectory;
+        string logFolder = Path.Combine(exeDirectory, "log");
+
+        try
+        {
+            if (!Directory.Exists(logFolder))
+            {
+                Directory.CreateDirectory(logFolder);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"\nError al crear la carpeta 'log': {ex.Message}");
+            Console.WriteLine("Presiona cualquier tecla para salir...");
+            Console.ReadKey();
+            return;
+        }
+
+        // 4. Nombre dinámico del archivo LOG con fecha y hora
+        string logFileName = $"log_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.txt";
+        string logFilePath = Path.Combine(logFolder, logFileName);
+
         StringBuilder logContent = new StringBuilder();
-        
         logContent.AppendLine("==================================================================");
         logContent.AppendLine($"LOG DE PROCESAMIENTO XML - {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
         logContent.AppendLine("==================================================================");
 
-        // 4. Leer registros del CSV
+        // 5. Leer registros del CSV
         string[] todasLasLineas = File.ReadAllLines(csvFile);
         var registros = todasLasLineas
             .Select(l => l.Trim())
@@ -82,7 +102,7 @@ class Program
         int fallidos = 0;
         int procesados = 0;
 
-        // 5. Procesar cada registro y registrar en LOG
+        // 6. Procesar cada registro
         foreach (string accessionNumber in registros)
         {
             procesados++;
@@ -115,7 +135,7 @@ class Program
                 // Consola
                 Console.WriteLine($"[{procesados}/{totalRegistros}] [{barra}] {porcentaje:0.0}% | OK: {fileName}");
                 
-                // Detalle en el LOG
+                // LOG
                 logContent.AppendLine($"[{timestamp}] [ÉXITO] Código: {accessionNumber} -> Generado correctamente como '{fileName}'");
             }
             catch (Exception ex)
@@ -125,12 +145,12 @@ class Program
                 // Consola
                 Console.WriteLine($"[{procesados}/{totalRegistros}] [{barra}] {porcentaje:0.0}% | ERROR en Código: {accessionNumber}");
 
-                // Detalle en el LOG
+                // LOG
                 logContent.AppendLine($"[{timestamp}] [ERROR] Código: {accessionNumber} -> Falló la creación. Motivo: {ex.Message}");
             }
         }
 
-        // 6. Resumen final en el LOG y en consola
+        // 7. Resumen final en LOG y consola
         logContent.AppendLine("\n==================================================================");
         logContent.AppendLine("RESUMEN DE RESULTADOS:");
         logContent.AppendLine($"Total procesados: {totalRegistros}");
@@ -138,7 +158,7 @@ class Program
         logContent.AppendLine($"Fallidos:         {fallidos}");
         logContent.AppendLine("==================================================================");
 
-        // Guardar el archivo LOG físico
+        // Guardar el archivo LOG dentro de la carpeta /log/
         File.WriteAllText(logFilePath, logContent.ToString());
 
         Console.WriteLine("\n=============================================");
