@@ -32,7 +32,7 @@ class Program
         }
 
         // Crear la carpeta de destino si no existe
-        try;
+        try
         {
             if (!Directory.Exists(targetDirectory))
             {
